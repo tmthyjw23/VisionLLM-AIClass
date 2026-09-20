@@ -56,3 +56,13 @@ def test_api_analytics_and_export():
     res_csv = client.get("/api/analysis/export/csv")
     assert res_csv.status_code == 200
     assert "Ground Truth Name" in res_csv.text
+
+def test_slide_endpoints():
+    res_slide_html = client.get("/slide.html")
+    assert res_slide_html.status_code == 200
+    assert "AI Building Vision Inspector" in res_slide_html.text
+    assert "reveal" in res_slide_html.text
+
+    res_slide = client.get("/slide")
+    assert res_slide.status_code == 200
+    assert "AI Building Vision Inspector" in res_slide.text

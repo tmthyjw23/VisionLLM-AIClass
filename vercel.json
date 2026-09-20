@@ -14,7 +14,8 @@
     { "src": "/api/(.*)", "dest": "api/index.py" },
     { "src": "/uploads/(.*)", "dest": "api/index.py" },
     { "src": "/static/(.*)", "dest": "app/static/$1" },
-    { "src": "/slide.html", "dest": "slide.html" },
+    { "src": "/slide.html", "dest": "app/static/slide.html" },
+    { "src": "/slide", "dest": "app/static/slide.html" },
     { "src": "/(.*)", "dest": "api/index.py" }
   ]
 }

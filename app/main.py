@@ -18,9 +18,15 @@ from app.vision_client import call_vision_api, PROMPT_PRESETS, validate_llm_conn
 from app.verification import run_verification_engine
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-UPLOAD_DIR = BASE_DIR / "app" / "uploads"
+
+if os.environ.get("VERCEL"):
+    UPLOAD_DIR = Path("/tmp/uploads")
+    EXPORTS_DIR = Path("/tmp/exports")
+else:
+    UPLOAD_DIR = BASE_DIR / "app" / "uploads"
+    EXPORTS_DIR = BASE_DIR / "app" / "exports"
+
 STATIC_DIR = BASE_DIR / "app" / "static"
-EXPORTS_DIR = BASE_DIR / "app" / "exports"
 
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
@@ -480,6 +486,21 @@ def llm_test_connection(req: LLMTestRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail="Base URL dan API Key wajib diisi.")
     return validate_llm_connection(req.base_url, req.api_key)
 
+@app.get("/slide.html", response_class=HTMLResponse)
+@app.get("/slide", response_class=HTMLResponse)
+def serve_slide():
+    candidate_paths = [
+        STATIC_DIR / "slide.html",
+        BASE_DIR / "slide.html",
+        BASE_DIR / "app" / "static" / "slide.html",
+        Path("slide.html"),
+        Path("app/static/slide.html")
+    ]
+    for p in candidate_paths:
+        if p.exists():
+            return HTMLResponse(content=p.read_text(encoding="utf-8"))
+    return HTMLResponse("<h2>Slide tidak ditemukan</h2>", status_code=404)
+
 app.include_router(api_router)
 
 @app.get("/", response_class=HTMLResponse)
@@ -487,4 +508,4 @@ def serve_index():
     index_file = STATIC_DIR / "index.html"
     if index_file.exists():
         return HTMLResponse(content=index_file.read_text(encoding="utf-8"))
-    return HTMLResponse("<h2>AI Building Vision Inspector loading...</h2>")
+    return HTMLResponse("<h2>AI Building Vision Inspector loading...</h2>", status_code=404)
