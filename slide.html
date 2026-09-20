@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Building Vision Inspector - Class Practical #1</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.4.0/css/reveal.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.4.0/css/theme/white.css" />
+  <style>
+    .reveal .state.selection.background { background-color: #1e1e2f; color: #d0d0d0; }
+    .reveal a { color: #6366f1; text-decoration: none; border-bottom: 1px solid #6366f1; }
+    .reveal a:hover { color: #a78bfa; }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <section>
+        <h1>AI Building Vision Inspector</h1>
+        <p>Class Practical #1 | UNKLAB</p>
+        <p><small>Mata Kuliah AI • Kolab: Informatika ↔ Arsitektur</small></p>
+      </section>
+
+      <section>
+        <h2>Tujuan (Goals)</h2>
+        <ol>
+          <li>Menguji kemampuan vision LLM mendeteksi objek interior.</li>
+          <li>Membuat prompt efektif untuk material, kondisi, pencahayaan.</li>
+          <li>Verifikasi manual (Ground Truth) vs Hasil AI.</li>
+          <li>Menganalisis akurasi & limitasi LLM Vision.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>Arsitek Sistem</h2>
+        <div style="font-size: 0.85em; line-height: 1.6;">
+          <strong>Input:</strong> Gambar Interior → <strong>Prompt Builder</strong> (Structured/Arch/Generic) → <strong>LLM Vision</strong> (Gemini API) → <strong>Output JSON</strong>.<br>
+          <strong>Ground Truth:</strong> Arsitek catat objek aktual <em>sebelum</em> LLM (Blind Pre-Inspect).<br>
+          <strong>Verifikasi:</strong> Engine matching fuzzy + sinonim Indonesia → 4 Kategori: Correct/Missed/False/Misclassified.<br>
+          <strong>Output:</strong> Dashboard Metrik + Export MD/CSV (10 Analisis Questions).
+        </div>
+      </section>
+
+      <section>
+        <h2>Alur Kerja Activity #1</h2>
+        <ol style="font-size: 0.9em; line-height: 1.8;">
+          <li><strong>Input Citra:</strong> Unggah foto ruang kelas/koridor atau ambil via webcam.</li>
+          <li><strong>Ground Truth (Blind):</strong> Arsitek mencatat objek aktual, material, kondisi <em>sebelum</em> LLM dijalankan.</li>
+          <li><strong>Pilih Preset Prompt:</strong> Structured JSON (rekomendasi), Architectural, atau Generic.</li>
+          <li><strong>Jalankan Vision LLM:</strong> Kirim gambar ke Gemini API.</li>
+          <li><strong>Verifikasi & Export:</strong> Sistem klasifikasi otomatis + Export laporan Markdown/CSV untuk 10 Pertanyaan Analisis.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>Flow Data & Verifikasi</h2>
+        <div style="font-size: 0.85em; line-height: 1.6;">
+          <strong>[User Upload]</strong> → [DB: images] → <br>
+          <strong>[Prompt Selection]</strong> → <br>
+          <strong>[Vision API Call]</strong> → [DB: detections] → <br>
+          <strong>[Verification Engine]</strong> (Fuzzy + Klub Sinonim) → [DB: verifications] → <br>
+          <strong>[Dashboard]</strong> (4 KPI + Table per-ekselusif) → <br>
+          <strong>[Export]</strong> (Markdown Laporan + CSV Dataset).
+        </div>
+        <p><strong>4 Kategori:</strong> <span style="color:#10b981;">Correct</span> | <span style="color:#f87171;">Missed</span> | <span style="color:#f87171;">False</span> | <span style="color:#fbbf24;">Misclassified</span></p>
+      </section>
+
+      <section>
+        <h2>10 Pertanyaan Analisis (Output Otomatis)</h2>
+        <ul style="font-size: 0.85em; line-height: 1.6;">
+          <li><strong>1.</strong> Berapa banyak objek terdeteksi LLM?</li>
+          <li><strong>2.</strong> Apakah semua objects berhasil dideteksi?</li>
+          <li><strong>3.</strong> Ada Missing Detection?</li>
+          <li><strong>4.</strong> Ada False Detection?</li>
+          <li><strong>5.</strong> Ada Misclassification?</li>
+          <li><strong>6.</strong> Objek mudah dikenali? (Kontur jelas, skala besar).</li>
+          <li><strong>7.</strong> Objek sulit dikenali? (Kecil, terpasang rata dinding).</li>
+          <li><strong>8.</strong> Kualitas gambar memengaruhi hasil?</li>
+          <li><strong>8.</strong> Perubahan prompt memengaruhi hasil?</li>
+          <li><strong>9.</strong> Apa batasan LLM Vision?</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Kesimpulan Diskusi</h2>
+        <p><em>"LLM vision memiliki pemahaman semantik tinggi terhadap material & kerusakan bangunan, namun lemah pada objek kecil/terpasang rata (saklar, stopkontak) dan bergantung pada resolusi/pencahayaan gambar."</em></p>
+      </section>
+
+      <section>
+        <h2>Masa Depan & Kontribusi</h2>
+        <ul>
+          <li>Migrasi ke Postgres/Neon untuk persisten multi-user.</li>
+          <li>Integrasi YOLO (Activity #2) — perbandingan ML vs LLM.</li>
+          <li>Optimasi Prompt berdasarkan hasil verifikasi.</li>
+          <li>Template untuk proyek akhir mata kuliah.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Terima Kasih & Q&A</h2>
+        <p>Repo GitHub: <a href="https://github.com/tmthyjw23/VisionLLM-AIClass" target="_blank">github.com/tmthyjw23/VisionLLM-AIClass</a></p>
+        <p>Domain: <a href="https://vlm.timotation.biz.id/slide.html" target="_blank">https://vlm.timotation.biz.id/slide.html</a></p>
+      </section>
+
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.4.0/js/reveal.js"></script>
+  <script>Reveal.initialize({ hash: true, center: true, transition: 'fade', mouseWheel: true, touch: true });</script>
+</body>
+</html>
