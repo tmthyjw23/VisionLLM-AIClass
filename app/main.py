@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from app.db import init_db, execute_query, execute_insert, execute_update, get_connection
-from app.vision_client import call_vision_api, PROMPT_PRESETS
+from app.vision_client import call_vision_api, PROMPT_PRESETS, validate_llm_connection
 from app.verification import run_verification_engine
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -60,9 +60,20 @@ class GroundTruthItem(BaseModel):
 class GroundTruthBulkCreate(BaseModel):
     items: List[GroundTruthItem]
 
+class LLMConfig(BaseModel):
+    """Per-request LLM credentials supplied from the user's own setup gate."""
+    base_url: str = ""
+    api_key: str = ""
+    model: str = ""
+
 class DetectionRequest(BaseModel):
     prompt_preset: str = "structured_json"
     custom_prompt: Optional[str] = None
+    llm: Optional[LLMConfig] = None
+
+class LLMTestRequest(BaseModel):
+    base_url: str
+    api_key: str
 
 class VerificationUpdateRequest(BaseModel):
     status: str
@@ -186,11 +197,15 @@ def trigger_detection(
     if not image_path.exists():
         raise HTTPException(status_code=404, detail="File gambar fisik tidak ditemukan di server")
 
+    llm_override = req.llm or LLMConfig()
     try:
         detection_result = call_vision_api(
             image_path=str(image_path),
             prompt_preset=req.prompt_preset,
-            custom_prompt=req.custom_prompt
+            custom_prompt=req.custom_prompt,
+            base_url=llm_override.base_url,
+            api_key=llm_override.api_key,
+            model_name=llm_override.model
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Gagal memanggil Vision API: {str(e)}")
@@ -457,6 +472,13 @@ def export_csv_report() -> Response:
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=dataset-verifikasi-activity-1.csv"}
     )
+
+@api_router.post("/llm/test-connection")
+def llm_test_connection(req: LLMTestRequest) -> Dict[str, Any]:
+    """Validate user-supplied LLM credentials without running inference."""
+    if not req.base_url.strip() or not req.api_key.strip():
+        raise HTTPException(status_code=400, detail="Base URL dan API Key wajib diisi.")
+    return validate_llm_connection(req.base_url, req.api_key)
 
 app.include_router(api_router)
 

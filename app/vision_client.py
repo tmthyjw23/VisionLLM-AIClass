@@ -131,14 +131,18 @@ def parse_llm_response(raw_text: str) -> Dict[str, Any]:
 def call_vision_api(
     image_path: str,
     prompt_preset: str = "structured_json",
-    custom_prompt: Optional[str] = None
+    custom_prompt: Optional[str] = None,
+    base_url: Optional[str] = None,
+    api_key: Optional[str] = None,
+    model_name: Optional[str] = None
 ) -> Dict[str, Any]:
+    # Priority: explicit per-request override (user's own setup) > env/.env fallback
     env = load_env_vars()
-    base_url = env.get("VISION_BASE_URL", "http://localhost:20128/v1")
-    api_key = env.get("VISION_API_KEY", "")
+    base_url = (base_url or "").strip() or env.get("VISION_BASE_URL", "http://localhost:20128/v1")
+    api_key = (api_key or "").strip() or env.get("VISION_API_KEY", "")
     if not api_key:
-        raise ValueError("VISION_API_KEY tidak dikonfigurasi. Set di .env atau environment variable Vercel.")
-    model_name = env.get("VISION_MODEL", "ag/gemini-3.8-flash-high")
+        raise ValueError("VISION_API_KEY tidak dikonfigurasi. Lengkapi LLM Setup di aplikasi atau set di .env.")
+    model_name = (model_name or "").strip() or env.get("VISION_MODEL", "ag/gemini-3.8-flash-high")
 
     endpoint = f"{base_url.rstrip('/')}/chat/completions"
 
@@ -193,3 +197,50 @@ def call_vision_api(
         "lighting": parsed_result.get("lighting", {}),
         "detected_objects_count": len(parsed_result.get("objects", []))
     }
+
+
+def validate_llm_connection(base_url: str, api_key: str) -> Dict[str, Any]:
+    """Validate user-supplied OpenAI-compatible credentials.
+
+    Tries GET {base}/models (OpenAI-compatible). If the base URL is a
+    Google Gemini direct endpoint, tries the Gemini models API instead.
+    Returns {"ok": bool, "models": [...], "error": str|None}.
+    Never raises — all failures are reported in the payload.
+    """
+    base = (base_url or "").strip().rstrip("/")
+    key = (api_key or "").strip()
+    if not base or not key:
+        return {"ok": False, "models": [], "error": "Base URL dan API Key wajib diisi."}
+
+    try:
+        # Google Gemini direct REST API
+        if "generativelanguage.googleapis.com" in base:
+            gemini_url = f"{base}/v1beta/models?key={key}"
+            resp = requests.get(gemini_url, timeout=20)
+            resp.raise_for_status()
+            data = resp.json()
+            models = [m.get("name", "").replace("models/", "") for m in data.get("models", [])]
+            return {"ok": True, "models": sorted(set(models)), "error": None}
+
+        # Standard OpenAI-compatible: GET /models
+        models_url = f"{base}/models"
+        resp = requests.get(
+            models_url,
+            headers={"Authorization": f"Bearer {key}"},
+            timeout=20
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        models = [m.get("id", "") for m in data.get("data", []) if m.get("id")]
+        return {"ok": True, "models": sorted(set(models)), "error": None}
+    except requests.exceptions.Timeout:
+        return {"ok": False, "models": [], "error": "Timeout: server LLM tidak merespons dalam 20 detik."}
+    except requests.exceptions.ConnectionError:
+        return {"ok": False, "models": [], "error": f"Tidak dapat terhubung ke {base}. Periksa URL dan koneksi."}
+    except requests.exceptions.HTTPError as e:
+        status = e.response.status_code if e.response is not None else "?"
+        if status == 401:
+            return {"ok": False, "models": [], "error": "API Key ditolak (401 Unauthorized). Periksa kembali key Anda."}
+        return {"ok": False, "models": [], "error": f"Server menolak request (HTTP {status}). Periksa Base URL."}
+    except Exception as e:
+        return {"ok": False, "models": [], "error": f"Gagal memvalidasi koneksi: {str(e)}"}

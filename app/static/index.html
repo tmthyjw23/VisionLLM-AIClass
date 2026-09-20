@@ -556,6 +556,67 @@
 
   </main>
 
+  <!-- LLM Setup Gate (blocking onboarding: user brings their own LLM credentials) -->
+  <div id="llm-setup-gate" class="fixed inset-0 bg-zinc-950/95 backdrop-blur-md z-[60] flex items-center justify-center p-4 hidden overflow-y-auto">
+    <div class="glass-card rounded-2xl max-w-lg w-full p-5 sm:p-7 space-y-5 border border-zinc-700 shadow-2xl my-8">
+      <div class="text-center space-y-2">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+          <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+          </svg>
+        </div>
+        <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">Setup LLM Anda Sendiri</h2>
+        <p class="text-xs text-zinc-400 leading-relaxed">Sebelum masuk, hubungkan aplikasi ke penyedia LLM <strong class="text-zinc-200">milik Anda</strong> (OpenAI-compatible). Kredensial tersimpan <strong class="text-zinc-200">hanya di browser Anda</strong> — tidak pernah masuk Git atau database server.</p>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-zinc-300 mb-1.5">Preset Penyedia:</label>
+          <select id="setup-provider" onchange="applyLLMPreset()" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-zinc-200 focus:outline-none focus:border-indigo-500 transition">
+            <option value="router9">9router Proxy Lokal (Kelas UNKLAB)</option>
+            <option value="openai">OpenAI (api.openai.com)</option>
+            <option value="openrouter">OpenRouter (openrouter.ai)</option>
+            <option value="ollama">Ollama Lokal (localhost:11434)</option>
+            <option value="gemini">Google Gemini Direct (API Key AIza...)</option>
+            <option value="custom">Custom OpenAI-Compatible ...</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-zinc-300 mb-1.5">Base URL <span class="font-normal text-zinc-500">(tanpa trailing slash)</span>:</label>
+          <input type="url" id="setup-base-url" placeholder="http://localhost:20128/v1" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-zinc-200 font-mono focus:outline-none focus:border-indigo-500 transition">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-zinc-300 mb-1.5">API Key:</label>
+          <div class="relative">
+            <input type="password" id="setup-api-key" placeholder="sk-... / AIza... " class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 pr-16 text-zinc-200 font-mono focus:outline-none focus:border-indigo-500 transition">
+            <button type="button" onclick="toggleSetupKeyVisibility()" id="btn-toggle-key" class="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-zinc-400 hover:text-white px-2 py-1">Lihat</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-zinc-300 mb-1.5">Model:</label>
+          <input type="text" id="setup-model" list="setup-model-list" placeholder="ag/gemini-3.8-flash-high" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-zinc-200 font-mono focus:outline-none focus:border-indigo-500 transition">
+          <datalist id="setup-model-list"></datalist>
+          <span class="text-[10px] text-zinc-500 mt-1 block">Klik "Test Koneksi" untuk memuat daftar model dari server Anda.</span>
+        </div>
+
+        <div id="setup-test-status" class="hidden p-3 rounded-xl border text-[11px] leading-relaxed"></div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="testLLMConnection()" id="btn-test-llm" class="btn-touch py-2.5 rounded-xl text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition border border-zinc-700">
+          Test Koneksi
+        </button>
+        <button onclick="saveLLMConfigAndEnter()" id="btn-enter-app" disabled class="btn-touch py-2.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-indigo-600/20">
+          Simpan & Masuk
+        </button>
+      </div>
+      <button id="btn-close-setup-gate" onclick="closeSetupGate()" class="hidden w-full text-[11px] text-zinc-500 hover:text-zinc-300 transition">Tutup tanpa menyimpan (batal ubah)</button>
+    </div>
+  </div>
+
   <!-- Settings Modal (HCI: Configuration for Serverless / API Key) -->
   <div id="settings-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="glass-card rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 border border-zinc-700 shadow-2xl">
@@ -592,6 +653,18 @@
           </div>
         </div>
 
+        <div class="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800 text-[11px] text-zinc-400 space-y-2">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="font-semibold text-indigo-400">Konfigurasi LLM Saya:</span>
+              <p id="settings-llm-summary" class="mt-0.5">Belum dikonfigurasi</p>
+            </div>
+          </div>
+          <button onclick="closeSettingsModal(); openSetupGate(false)" class="btn-touch w-full py-2 rounded-xl text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition border border-zinc-700">
+            Ubah Base URL / API Key / Model
+          </button>
+        </div>
+
         <div class="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800 text-[11px] text-zinc-400 space-y-1">
           <span class="font-semibold text-indigo-400">Status Serverless:</span>
           <p>Jika dideploy ke GitHub Pages / Vercel, pilih mode <strong>Direct Gemini API</strong>. Semua data eksperimen tersimpan di IndexedDB browser Anda dan laporan dapat langsung diekspor.</p>
@@ -620,6 +693,181 @@
     let currentSelectedFile = null;
     let localGroundTruths = [];
     let webcamStream = null;
+    let llmConnectionValid = false;
+
+    // ---- LLM Setup Gate (blocking onboarding) ----
+    const LLM_PRESETS = {
+      router9:  { base_url: 'http://localhost:20128/v1', model: 'ag/gemini-3.8-flash-high' },
+      openai:   { base_url: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+      openrouter:{ base_url: 'https://openrouter.ai/api/v1', model: 'google/gemini-flash-1.5' },
+      ollama:   { base_url: 'http://localhost:11434/v1', model: 'gemma3:4b' },
+      gemini:   { base_url: 'https://generativelanguage.googleapis.com', model: 'gemini-1.5-flash' },
+      custom:   { base_url: '', model: '' }
+    };
+
+    function getLLMConfig() {
+      try {
+        const raw = localStorage.getItem('vision_llm_config');
+        if (!raw) return null;
+        const cfg = JSON.parse(raw);
+        if (!cfg.base_url || !cfg.api_key || !cfg.model) return null;
+        return cfg;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function applyLLMPreset() {
+      const key = document.getElementById('setup-provider').value;
+      const preset = LLM_PRESETS[key] || LLM_PRESETS.custom;
+      document.getElementById('setup-base-url').value = preset.base_url;
+      document.getElementById('setup-model').value = preset.model;
+      llmConnectionValid = false;
+      document.getElementById('btn-enter-app').disabled = true;
+      hideSetupTestStatus();
+    }
+
+    function toggleSetupKeyVisibility() {
+      const input = document.getElementById('setup-api-key');
+      const btn = document.getElementById('btn-toggle-key');
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.innerText = 'Sembunyi';
+      } else {
+        input.type = 'password';
+        btn.innerText = 'Lihat';
+      }
+    }
+
+    function showSetupTestStatus(message, ok) {
+      const el = document.getElementById('setup-test-status');
+      el.classList.remove('hidden');
+      el.className = ok
+        ? 'p-3 rounded-xl border text-[11px] leading-relaxed bg-emerald-950/60 border-emerald-500/40 text-emerald-200'
+        : 'p-3 rounded-xl border text-[11px] leading-relaxed bg-rose-950/60 border-rose-500/40 text-rose-200';
+      el.innerText = message;
+    }
+
+    function hideSetupTestStatus() {
+      document.getElementById('setup-test-status').classList.add('hidden');
+    }
+
+    async function testLLMConnection() {
+      const base_url = document.getElementById('setup-base-url').value.trim();
+      const api_key = document.getElementById('setup-api-key').value.trim();
+      const btn = document.getElementById('btn-test-llm');
+
+      if (!base_url || !api_key) {
+        showSetupTestStatus('Isi Base URL dan API Key terlebih dahulu.', false);
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = 'Menguji...';
+      hideSetupTestStatus();
+
+      try {
+        const res = await fetch('/api/llm/test-connection', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base_url, api_key })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.detail || 'Validasi gagal');
+        }
+
+        if (data.ok) {
+          llmConnectionValid = true;
+          document.getElementById('btn-enter-app').disabled = false;
+          const count = (data.models || []).length;
+          showSetupTestStatus(`Koneksi valid. Ditemukan ${count} model di server Anda. Pilih model lalu klik "Simpan & Masuk".`, true);
+
+          // Populate model suggestions
+          const list = document.getElementById('setup-model-list');
+          list.innerHTML = (data.models || []).slice(0, 100).map(m => `<option value="${m}">`).join('');
+          const currentModel = document.getElementById('setup-model').value.trim();
+          if (!currentModel && data.models && data.models.length > 0) {
+            document.getElementById('setup-model').value = data.models[0];
+          }
+        } else {
+          llmConnectionValid = false;
+          document.getElementById('btn-enter-app').disabled = true;
+          showSetupTestStatus(data.error || 'Koneksi gagal.', false);
+        }
+      } catch (err) {
+        llmConnectionValid = false;
+        document.getElementById('btn-enter-app').disabled = true;
+        showSetupTestStatus('Error: ' + err.message, false);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Test Koneksi';
+      }
+    }
+
+    function saveLLMConfigAndEnter() {
+      const cfg = {
+        provider: document.getElementById('setup-provider').value,
+        base_url: document.getElementById('setup-base-url').value.trim().replace(/\/+$/, ''),
+        api_key: document.getElementById('setup-api-key').value.trim(),
+        model: document.getElementById('setup-model').value.trim(),
+        configured_at: new Date().toISOString()
+      };
+      if (!cfg.base_url || !cfg.api_key || !cfg.model) {
+        showSetupTestStatus('Lengkapi Base URL, API Key, dan Model.', false);
+        return;
+      }
+      if (!llmConnectionValid) {
+        showSetupTestStatus('Klik "Test Koneksi" dan pastikan valid sebelum masuk.', false);
+        return;
+      }
+      localStorage.setItem('vision_llm_config', JSON.stringify(cfg));
+      document.getElementById('llm-setup-gate').classList.add('hidden');
+      updateRuntimeBadge();
+      showToast('Konfigurasi LLM tersimpan. Selamat datang!', 'success');
+    }
+
+    function openSetupGate(blocking) {
+      // Prefill from saved config if exists
+      const saved = getLLMConfig();
+      if (saved) {
+        document.getElementById('setup-base-url').value = saved.base_url;
+        document.getElementById('setup-api-key').value = saved.api_key;
+        document.getElementById('setup-model').value = saved.model;
+        if (saved.provider && LLM_PRESETS[saved.provider]) {
+          document.getElementById('setup-provider').value = saved.provider;
+        }
+      } else {
+        applyLLMPreset();
+      }
+      llmConnectionValid = false;
+      document.getElementById('btn-enter-app').disabled = true;
+      hideSetupTestStatus();
+      document.getElementById('btn-close-setup-gate').classList.toggle('hidden', blocking);
+      document.getElementById('llm-setup-gate').classList.remove('hidden');
+    }
+
+    function closeSetupGate() {
+      document.getElementById('llm-setup-gate').classList.add('hidden');
+    }
+
+    function updateRuntimeBadge() {
+      const cfg = getLLMConfig();
+      const badge = document.getElementById('runtime-mode-badge');
+      if (!badge) return;
+      if (cfg) {
+        badge.innerText = cfg.model.length > 28 ? cfg.model.slice(0, 28) + '…' : cfg.model;
+        badge.className = 'hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30';
+      } else {
+        badge.innerText = 'LLM belum disetup';
+        badge.className = 'hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-mono bg-rose-500/10 text-rose-400 border border-rose-500/30';
+      }
+      const summary = document.getElementById('settings-llm-summary');
+      if (summary) {
+        summary.innerText = cfg ? `${cfg.model} @ ${cfg.base_url}` : 'Belum dikonfigurasi';
+      }
+    }
 
     // Toast Notification System (Replaces disruptive alerts)
     function showToast(message, type = 'info') {
@@ -861,11 +1109,20 @@
       btnText.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Menghubungi Gemini Vision...';
       statusEl.innerText = 'Mengirim gambar...';
 
+      const llmCfg = getLLMConfig();
+      if (!llmCfg) {
+        showToast('Setup LLM Anda terlebih dahulu sebelum menjalankan deteksi', 'warning');
+        openSetupGate(true);
+        btn.disabled = false;
+        btnText.innerHTML = 'Analisis Citra dengan Gemini Vision';
+        return;
+      }
+
       try {
         const res = await fetch(`/api/images/${currentImageId}/detect`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt_preset: preset })
+          body: JSON.stringify({ prompt_preset: preset, llm: llmCfg })
         });
 
         if (!res.ok) {
@@ -1062,6 +1319,11 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       loadRecentGallery();
+      updateRuntimeBadge();
+      // Blocking gate: user must setup their own LLM before entering
+      if (!getLLMConfig()) {
+        openSetupGate(true);
+      }
     });
   </script>
 </body>
